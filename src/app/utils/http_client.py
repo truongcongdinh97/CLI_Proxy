@@ -100,9 +100,14 @@ class HTTPClient:
             )
             transport_kwargs["transport"] = transport
         
+        # Build client kwargs - only add base_url if it's set
+        client_kwargs = {}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        
         # Create client with timeout and limits
         client = AsyncClient(
-            base_url=self.base_url,
+            **client_kwargs,
             timeout=Timeout(
                 connect=5.0,
                 read=self.timeout,
