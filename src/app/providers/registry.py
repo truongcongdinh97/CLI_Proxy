@@ -3,7 +3,7 @@ Provider registry for managing AI service providers.
 """
 
 import asyncio
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, AsyncGenerator
 from datetime import datetime, timedelta
 import random
 
@@ -313,6 +313,45 @@ class ProviderRegistry:
                 response_time=response_time,
             )
             raise
+    
+    async def chat_completion_stream(
+        self,
+        model: str,
+        messages: List[Dict[str, Any]],
+        provider_name: Optional[str] = None,
+        **kwargs
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Create a streaming chat completion using the appropriate provider.
+        
+        Args:
+            model: Model name
+            messages: List of messages
+            provider_name: Optional specific provider name
+            **kwargs: Additional parameters
+            
+        Yields:
+            Streaming completion chunks
+        """
+        # Select provider
+        if provider_name:
+            provider = self.get_provider(provider_name)
+            if not provider:
+                raise ValueError(f"Provider not found: {provider_name}")
+            if not provider.can_handle_model(model):
+                raise ValueError(f"Provider {provider_name} cannot handle model {model}")
+        else:
+            provider = await self.select_provider(model)
+            if not provider:
+                raise ValueError(f"No provider available for model {model}")
+        
+        # Stream from provider
+        async for chunk in provider.chat_completion_stream(
+            messages=messages,
+            model=model,
+            **kwargs
+        ):
+            yield chunk
     
     async def health_check_all(self) -> Dict[str, bool]:
         """

@@ -282,6 +282,24 @@ class HTTPClient:
         """Make DELETE request."""
         return await self.request("DELETE", url, **kwargs)
     
+    def stream_post(self, url: str, **kwargs):
+        """
+        Make streaming POST request.
+        
+        Args:
+            url: URL to request
+            **kwargs: Additional arguments for httpx
+            
+        Returns:
+            Async context manager for streaming response
+        """
+        # Add default headers
+        headers = dict(self._default_headers)
+        headers.update(kwargs.get("headers", {}))
+        kwargs["headers"] = headers
+        
+        return self.client.stream("POST", url, **kwargs)
+    
     async def aclose(self) -> None:
         """Close the HTTP client."""
         if self.client:

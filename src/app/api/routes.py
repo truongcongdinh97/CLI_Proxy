@@ -1,10 +1,11 @@
 """
-API routes for CLI Proxy API.
+"""API routes for CLI Proxy API.
 """
 
-from typing import Dict, Any, List
+import json
+from typing import Dict, Any, List, AsyncGenerator
 from fastapi import APIRouter, HTTPException, Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from ..auth.manager import AuthManager
 from ..providers.registry import ProviderRegistry
@@ -88,7 +89,29 @@ async def chat_completions(
         if stream is not None:
             kwargs["stream"] = stream
         
-        # Get completion from provider registry
+        # Check if streaming is requested
+        if stream:
+            # Return streaming response
+            async def generate_stream() -> AsyncGenerator[str, None]:
+                async for chunk in provider_registry.chat_completion_stream(
+                    model=model,
+                    messages=messages,
+                    **kwargs
+                ):
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                yield "data: [DONE]\n\n"
+            
+            return StreamingResponse(
+                generate_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                }
+            )
+        
+        # Get completion from provider registry (non-streaming)
         response = await provider_registry.chat_completion(
             model=model,
             messages=messages,

@@ -3,7 +3,8 @@ Gemini provider implementation.
 """
 
 import asyncio
-from typing import Dict, List, Any, Optional
+import json
+from typing import Dict, List, Any, Optional, AsyncGenerator
 from datetime import datetime
 
 from .base import BaseProvider, ProviderConfig, ProviderStatus
@@ -199,6 +200,133 @@ class GeminiProvider(BaseProvider):
                 }
         
         raise Exception("Invalid response format from Gemini API")
+    
+    async def chat_completion_stream(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        **kwargs
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Create a streaming chat completion.
+        
+        Args:
+            messages: List of messages
+            model: Model name
+            **kwargs: Additional parameters
+            
+        Yields:
+            Streaming completion chunks
+        """
+        # Convert OpenAI-style messages to Gemini format
+        gemini_contents = []
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            
+            if role == "system":
+                # Gemini doesn't have system role, prepend to first user message
+                if gemini_contents and gemini_contents[-1]["role"] == "user":
+                    gemini_contents[-1]["parts"][0]["text"] = (
+                        content + "\n\n" + gemini_contents[-1]["parts"][0]["text"]
+                    )
+            elif role == "user":
+                gemini_contents.append({
+                    "role": "user",
+                    "parts": [{"text": content}]
+                })
+            elif role == "assistant":
+                gemini_contents.append({
+                    "role": "model",
+                    "parts": [{"text": content}]
+                })
+        
+        # Prepare request body
+        request_body = {
+            "contents": gemini_contents,
+            "generationConfig": {
+                "temperature": kwargs.get("temperature", 0.7),
+                "topP": kwargs.get("top_p", 0.95),
+                "topK": kwargs.get("top_k", 40),
+                "maxOutputTokens": kwargs.get("max_tokens", 2048),
+                "stopSequences": kwargs.get("stop", []),
+            },
+        }
+        
+        # Build URL for streaming with API key
+        url = f"{self.base_url}/{self.api_version}/models/{model}:streamGenerateContent?alt=sse"
+        if self.api_key:
+            url += f"&key={self.api_key}"
+        
+        completion_id = f"chatcmpl-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        created = int(datetime.utcnow().timestamp())
+        
+        try:
+            # Make streaming request
+            async with self.http_client.stream_post(
+                url,
+                json=request_body,
+                timeout=kwargs.get("timeout", 120.0)
+            ) as response:
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    raise Exception(f"Gemini API error: {response.status_code} - {error_text.decode()}")
+                
+                async for line in response.aiter_lines():
+                    if not line or not line.startswith("data: "):
+                        continue
+                    
+                    data = line[6:]  # Remove "data: " prefix
+                    if data == "[DONE]":
+                        break
+                    
+                    try:
+                        chunk_data = json.loads(data)
+                        
+                        # Extract text from Gemini response
+                        if "candidates" in chunk_data and len(chunk_data["candidates"]) > 0:
+                            candidate = chunk_data["candidates"][0]
+                            if "content" in candidate and "parts" in candidate["content"]:
+                                text = candidate["content"]["parts"][0].get("text", "")
+                                
+                                # Yield OpenAI-compatible streaming chunk
+                                yield {
+                                    "id": completion_id,
+                                    "object": "chat.completion.chunk",
+                                    "created": created,
+                                    "model": model,
+                                    "choices": [
+                                        {
+                                            "index": 0,
+                                            "delta": {
+                                                "content": text,
+                                            },
+                                            "finish_reason": None,
+                                        }
+                                    ],
+                                }
+                    except json.JSONDecodeError:
+                        continue
+                
+                # Final chunk with finish_reason
+                yield {
+                    "id": completion_id,
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": model,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {},
+                            "finish_reason": "stop",
+                        }
+                    ],
+                }
+                
+        except Exception as e:
+            # If streaming fails, fallback to non-streaming
+            response = await self.chat_completion(messages, model, **kwargs)
+            yield response
     
     async def shutdown(self) -> None:
         """Shutdown the provider."""

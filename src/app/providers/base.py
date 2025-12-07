@@ -4,7 +4,7 @@ Base provider interface for AI service providers.
 
 import abc
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, AsyncGenerator
 from dataclasses import dataclass
 from enum import Enum
 
@@ -181,6 +181,27 @@ class BaseProvider(abc.ABC):
             Model information, or None if not found
         """
         pass
+    
+    async def chat_completion_stream(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        **kwargs
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Create a streaming chat completion.
+        
+        Args:
+            messages: List of messages
+            model: Model to use
+            **kwargs: Additional parameters
+            
+        Yields:
+            Streaming completion chunks
+        """
+        # Default implementation: call non-streaming and yield single chunk
+        response = await self.chat_completion(messages, model, **kwargs)
+        yield response
     
     async def health_check(self) -> bool:
         """
