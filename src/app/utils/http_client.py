@@ -50,6 +50,11 @@ class HTTPClient:
         
         # Initialize client
         self.client = self._create_client()
+        self._default_headers: Dict[str, str] = {}
+    
+    def set_default_headers(self, headers: Dict[str, str]) -> None:
+        """Set default headers for all requests."""
+        self._default_headers.update(headers)
     
     def _configure_proxy(self) -> Optional[Dict[str, str]]:
         """Configure proxy from config."""
@@ -154,8 +159,9 @@ class HTTPClient:
         
         for attempt in range(self.max_retries + 1):
             try:
-                # Add attempt-specific headers
-                headers = kwargs.get("headers", {})
+                # Add attempt-specific headers and merge with default headers
+                headers = dict(self._default_headers)
+                headers.update(kwargs.get("headers", {}))
                 headers["X-Retry-Attempt"] = str(attempt)
                 kwargs["headers"] = headers
                 
