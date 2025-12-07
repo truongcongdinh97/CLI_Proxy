@@ -76,6 +76,86 @@ class GeminiProvider(BaseProvider):
         # Gemini models typically start with "gemini-" or "models/gemini-"
         return model.startswith("gemini-") or "gemini" in model.lower()
     
+    def _extract_text_content(self, content: Any) -> str:
+        """
+        Extract text content from OpenAI message content.
+        Content can be a string or an array of content parts.
+        
+        Args:
+            content: Message content (string or array)
+            
+        Returns:
+            Text content as string
+        """
+        if content is None:
+            return ""
+        
+        if isinstance(content, str):
+            return content
+        
+        if isinstance(content, list):
+            # Content is array of parts (e.g., text + images)
+            text_parts = []
+            for part in content:
+                if isinstance(part, str):
+                    text_parts.append(part)
+                elif isinstance(part, dict):
+                    if part.get("type") == "text":
+                        text_parts.append(part.get("text", ""))
+                    # Skip image_url and other types for now
+            return "\n".join(text_parts)
+        
+        # Fallback: convert to string
+        return str(content)
+    
+    def _convert_messages_to_gemini(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Convert OpenAI-style messages to Gemini format.
+        
+        Args:
+            messages: List of OpenAI-format messages
+            
+        Returns:
+            List of Gemini-format contents
+        """
+        gemini_contents = []
+        system_message = None
+        
+        for msg in messages:
+            role = msg.get("role", "")
+            content = self._extract_text_content(msg.get("content"))
+            
+            if not content:
+                continue
+                
+            if role == "system":
+                # Store system message to prepend to first user message
+                system_message = content
+            elif role == "user":
+                # Prepend system message if exists
+                if system_message:
+                    content = system_message + "\n\n" + content
+                    system_message = None
+                    
+                gemini_contents.append({
+                    "role": "user",
+                    "parts": [{"text": content}]
+                })
+            elif role == "assistant":
+                gemini_contents.append({
+                    "role": "model",
+                    "parts": [{"text": content}]
+                })
+        
+        # If we still have system message and no user message, add it as user
+        if system_message and not gemini_contents:
+            gemini_contents.append({
+                "role": "user",
+                "parts": [{"text": system_message}]
+            })
+        
+        return gemini_contents
+    
     async def chat_completion(
         self,
         messages: List[Dict[str, Any]],
@@ -94,30 +174,7 @@ class GeminiProvider(BaseProvider):
             Completion response
         """
         # Convert OpenAI-style messages to Gemini format
-        gemini_contents = []
-        for msg in messages:
-            role = msg["role"]
-            content = msg["content"]
-            
-            if role == "system":
-                # Gemini doesn't have system role, prepend to first user message
-                if gemini_contents and gemini_contents[-1]["role"] == "user":
-                    gemini_contents[-1]["parts"][0]["text"] = (
-                        content + "\n\n" + gemini_contents[-1]["parts"][0]["text"]
-                    )
-                else:
-                    # Store system message for later
-                    pass
-            elif role == "user":
-                gemini_contents.append({
-                    "role": "user",
-                    "parts": [{"text": content}]
-                })
-            elif role == "assistant":
-                gemini_contents.append({
-                    "role": "model",
-                    "parts": [{"text": content}]
-                })
+        gemini_contents = self._convert_messages_to_gemini(messages)
         
         # Prepare request body
         request_body = {
@@ -219,27 +276,7 @@ class GeminiProvider(BaseProvider):
             Streaming completion chunks
         """
         # Convert OpenAI-style messages to Gemini format
-        gemini_contents = []
-        for msg in messages:
-            role = msg["role"]
-            content = msg["content"]
-            
-            if role == "system":
-                # Gemini doesn't have system role, prepend to first user message
-                if gemini_contents and gemini_contents[-1]["role"] == "user":
-                    gemini_contents[-1]["parts"][0]["text"] = (
-                        content + "\n\n" + gemini_contents[-1]["parts"][0]["text"]
-                    )
-            elif role == "user":
-                gemini_contents.append({
-                    "role": "user",
-                    "parts": [{"text": content}]
-                })
-            elif role == "assistant":
-                gemini_contents.append({
-                    "role": "model",
-                    "parts": [{"text": content}]
-                })
+        gemini_contents = self._convert_messages_to_gemini(messages)
         
         # Prepare request body
         request_body = {
