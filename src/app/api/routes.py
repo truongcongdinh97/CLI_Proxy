@@ -1,4 +1,3 @@
-"""
 """API routes for CLI Proxy API.
 """
 
