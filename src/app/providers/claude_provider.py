@@ -216,3 +216,22 @@ class ClaudeProvider(BaseProvider):
                 
         except Exception:
             return []
+
+    async def shutdown(self) -> None:
+        """Shutdown the provider."""
+        self._set_status(ProviderStatus.OFFLINE)
+    
+    async def list_models(self) -> List[Dict[str, Any]]:
+        """List available models."""
+        return await self.models()
+    
+    async def get_model_info(self, model: str) -> Optional[Dict[str, Any]]:
+        """Get information about a specific model."""
+        try:
+            models = await self.list_models()
+            for m in models:
+                if m["id"] == model:
+                    return m
+            return None
+        except Exception:
+            return None

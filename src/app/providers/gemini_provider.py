@@ -198,7 +198,11 @@ class GeminiProvider(BaseProvider):
         
         raise Exception("Invalid response format from Gemini API")
     
-    async def models(self) -> List[Dict[str, Any]]:
+    async def shutdown(self) -> None:
+        """Shutdown the provider."""
+        self._set_status(ProviderStatus.OFFLINE)
+    
+    async def list_models(self) -> List[Dict[str, Any]]:
         """
         List available models.
         
@@ -232,3 +236,22 @@ class GeminiProvider(BaseProvider):
                 
         except Exception:
             return []
+    
+    async def get_model_info(self, model: str) -> Optional[Dict[str, Any]]:
+        """
+        Get information about a specific model.
+        
+        Args:
+            model: Model name
+            
+        Returns:
+            Model information, or None if not found
+        """
+        try:
+            models = await self.list_models()
+            for m in models:
+                if m["id"] == model or m["id"].endswith(f"/{model}"):
+                    return m
+            return None
+        except Exception:
+            return None

@@ -125,6 +125,10 @@ class BaseProvider(abc.ABC):
         self.http_client = http_client
         self.stats = ProviderStats()
     
+    def _set_status(self, status: ProviderStatus) -> None:
+        """Set provider status."""
+        self.stats.status = status
+    
     @abc.abstractmethod
     async def initialize(self) -> None:
         """Initialize the provider."""
