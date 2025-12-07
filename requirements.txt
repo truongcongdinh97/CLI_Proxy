@@ -1,0 +1,31 @@
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+httpx==0.25.1
+aiofiles==23.2.1
+python-jose[cryptography]==3.3.0
+pyyaml==6.0.1
+asyncpg==0.29.0
+redis==5.0.1
+structlog==23.2.0
+watchdog==3.0.0
+python-multipart==0.0.6
+websockets==12.0
+cachetools==5.3.1
+cryptography==41.0.7
+
+# Auth and OAuth
+authlib==1.3.0
+requests-oauthlib==1.3.1
+
+# Development dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+black==23.11.0
+mypy==1.7.0
+flake8==6.1.0
+pre-commit==3.5.0
+python-dotenv==1.0.0
