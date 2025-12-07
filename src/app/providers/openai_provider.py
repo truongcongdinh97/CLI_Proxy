@@ -74,7 +74,11 @@ class OpenAIProvider(BaseProvider):
         """
         # OpenAI models typically start with "gpt-", "text-", "code-", etc.
         openai_prefixes = ["gpt-", "text-", "code-", "davinci-", "curie-", "babbage-", "ada-"]
-        return any(model.startswith(prefix) for prefix in openai_prefixes)
+        # DeepSeek models start with "deepseek-"
+        deepseek_prefixes = ["deepseek-"]
+        
+        all_prefixes = openai_prefixes + deepseek_prefixes
+        return any(model.startswith(prefix) for prefix in all_prefixes)
     
     async def chat_completion(
         self,

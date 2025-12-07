@@ -98,6 +98,14 @@ class OpenAICompatibilityAPIKey(BaseModel):
     proxy_url: Optional[str] = Field(default=None, alias="proxy-url")
 
 
+class DeepSeekKey(BaseModel):
+    """DeepSeek API key configuration."""
+    api_key: str = Field(alias="api-key")
+    base_url: Optional[str] = Field(default="https://api.deepseek.com", alias="base-url")
+    proxy_url: Optional[str] = Field(default=None, alias="proxy-url")
+    headers: Optional[Dict[str, str]] = None
+
+
 class OpenAICompatibility(BaseModel):
     """OpenAI compatibility provider configuration."""
     name: str
@@ -189,6 +197,9 @@ class AppConfig(BaseSettings):
     )
     vertex_api_key: List[VertexCompatKey] = Field(
         default_factory=list, alias="vertex-api-key"
+    )
+    deepseek_api_key: List[DeepSeekKey] = Field(
+        default_factory=list, alias="deepseek-api-key"
     )
     
     # Amp integration

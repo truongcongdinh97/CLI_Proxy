@@ -118,6 +118,12 @@ ws-auth: false
 #   - api-key: "vk-123..."                        # x-goog-api-key header
 #     base-url: "https://example.com/api"         # e.g. https://zenmux.ai/api
 #     proxy-url: "socks5://proxy.example.com:1080" # optional per-key proxy override
+
+# DeepSeek API keys (OpenAI-compatible, great for Cline)
+# deepseek-api-key:
+#   - api-key: "sk-xxx..."                        # Your DeepSeek API key
+#     base-url: "https://api.deepseek.com"        # Default DeepSeek API endpoint
+#     proxy-url: ""                                # optional per-key proxy override
 #     headers:
 #       X-Custom-Header: "custom-value"
 #     models:                                     # optional: map aliases to upstream model names

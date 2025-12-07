@@ -100,6 +100,23 @@ class ProviderRegistry:
                     enabled=True,
                 )
                 self.provider_configs[config.name] = config
+        
+        # Load DeepSeek API keys from config
+        deepseek_keys = getattr(self.config, 'deepseek_api_key', [])
+        for i, key_config in enumerate(deepseek_keys):
+            api_key = getattr(key_config, 'api_key', None)
+            base_url = getattr(key_config, 'base_url', 'https://api.deepseek.com')
+            
+            if api_key:
+                config = ProviderConfig(
+                    name=f"deepseek-{i}",
+                    provider_type=ProviderType.OPENAI,  # DeepSeek uses OpenAI-compatible API
+                    base_url=base_url,
+                    api_key=api_key,
+                    priority=1,  # High priority for DeepSeek
+                    enabled=True,
+                )
+                self.provider_configs[config.name] = config
     
     async def _initialize_provider(self, name: str, config: ProviderConfig) -> None:
         """
