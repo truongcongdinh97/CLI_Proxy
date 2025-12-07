@@ -31,16 +31,10 @@ class GeminiProvider(BaseProvider):
         super().__init__(config, auth_manager, http_client)
         self.base_url = config.base_url or "https://generativelanguage.googleapis.com"
         self.api_version = "v1beta"
+        self.api_key = config.api_key
     
     async def initialize(self) -> None:
         """Initialize the provider."""
-        await super().initialize()
-        
-        # Get authentication token
-        token = await self.auth_manager.get_token("gemini")
-        if token:
-            self.http_client.set_auth_token(token)
-        
         # Set default headers
         self.http_client.set_default_headers({
             "Content-Type": "application/json",
@@ -57,8 +51,11 @@ class GeminiProvider(BaseProvider):
         """
         try:
             # Simple health check - try to list models
+            url = f"{self.base_url}/{self.api_version}/models"
+            if self.api_key:
+                url += f"?key={self.api_key}"
             response = await self.http_client.get(
-                f"{self.base_url}/{self.api_version}/models",
+                url,
                 timeout=10.0
             )
             return response.status_code == 200
@@ -151,9 +148,14 @@ class GeminiProvider(BaseProvider):
             ]
         }
         
+        # Build URL with API key
+        url = f"{self.base_url}/{self.api_version}/models/{model}:generateContent"
+        if self.api_key:
+            url += f"?key={self.api_key}"
+        
         # Make request
         response = await self.http_client.post(
-            f"{self.base_url}/{self.api_version}/models/{model}:generateContent",
+            url,
             json=request_body,
             timeout=kwargs.get("timeout", 30.0)
         )
@@ -210,8 +212,12 @@ class GeminiProvider(BaseProvider):
             List of model information
         """
         try:
+            url = f"{self.base_url}/{self.api_version}/models"
+            if self.api_key:
+                url += f"?key={self.api_key}"
+            
             response = await self.http_client.get(
-                f"{self.base_url}/{self.api_version}/models",
+                url,
                 timeout=10.0
             )
             

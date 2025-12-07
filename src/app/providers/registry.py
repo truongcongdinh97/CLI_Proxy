@@ -50,35 +50,56 @@ class ProviderRegistry:
     
     async def _load_provider_configs(self) -> None:
         """Load provider configurations from app config."""
-        # This would load from the app config
-        # For now, create some example configurations
+        # Load Gemini API keys from config
+        gemini_keys = getattr(self.config, 'gemini_api_key', [])
+        for i, key_config in enumerate(gemini_keys):
+            api_key = getattr(key_config, 'api_key', None)
+            base_url = getattr(key_config, 'base_url', 'https://generativelanguage.googleapis.com')
+            
+            if api_key:
+                config = ProviderConfig(
+                    name=f"gemini-{i}",
+                    provider_type=ProviderType.GEMINI,
+                    base_url=base_url,
+                    api_key=api_key,
+                    priority=1,
+                    enabled=True,
+                )
+                self.provider_configs[config.name] = config
         
-        example_configs = [
-            ProviderConfig(
-                name="gemini-default",
-                provider_type=ProviderType.GEMINI,
-                base_url="https://generativelanguage.googleapis.com",
-                priority=1,
-                enabled=True,
-            ),
-            ProviderConfig(
-                name="openai-default",
-                provider_type=ProviderType.OPENAI,
-                base_url="https://api.openai.com",
-                priority=2,
-                enabled=True,
-            ),
-            ProviderConfig(
-                name="claude-default",
-                provider_type=ProviderType.CLAUDE,
-                base_url="https://api.anthropic.com",
-                priority=3,
-                enabled=True,
-            ),
-        ]
+        # Load Claude API keys from config
+        claude_keys = getattr(self.config, 'claude_api_key', [])
+        for i, key_config in enumerate(claude_keys):
+            api_key = getattr(key_config, 'api_key', None)
+            base_url = getattr(key_config, 'base_url', 'https://api.anthropic.com')
+            
+            if api_key:
+                config = ProviderConfig(
+                    name=f"claude-{i}",
+                    provider_type=ProviderType.CLAUDE,
+                    base_url=base_url,
+                    api_key=api_key,
+                    priority=2,
+                    enabled=True,
+                )
+                self.provider_configs[config.name] = config
         
-        for config in example_configs:
-            self.provider_configs[config.name] = config
+        # Load OpenAI/Codex API keys from config
+        codex_keys = getattr(self.config, 'codex_api_key', [])
+        for i, key_config in enumerate(codex_keys):
+            api_key = getattr(key_config, 'api_key', None)
+            base_url = getattr(key_config, 'base_url', 'https://api.openai.com')
+            
+            if api_key:
+                config = ProviderConfig(
+                    name=f"openai-{i}",
+                    provider_type=ProviderType.OPENAI,
+                    base_url=base_url,
+                    api_key=api_key,
+                    priority=3,
+                    enabled=True,
+                )
+                self.provider_configs[config.name] = config
     
     async def _initialize_provider(self, name: str, config: ProviderConfig) -> None:
         """

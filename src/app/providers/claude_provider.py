@@ -31,21 +31,18 @@ class ClaudeProvider(BaseProvider):
         super().__init__(config, auth_manager, http_client)
         self.base_url = config.base_url or "https://api.anthropic.com"
         self.api_version = "v1"
+        self.api_key = config.api_key
     
     async def initialize(self) -> None:
         """Initialize the provider."""
-        await super().initialize()
-        
-        # Get authentication token
-        token = await self.auth_manager.get_token("claude")
-        if token:
-            self.http_client.set_auth_token(f"Bearer {token}")
-        
-        # Set default headers
-        self.http_client.set_default_headers({
+        # Set default headers with API key
+        headers = {
             "Content-Type": "application/json",
             "anthropic-version": "2023-06-01",
-        })
+        }
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+        self.http_client.set_default_headers(headers)
         
         self._set_status(ProviderStatus.HEALTHY)
     

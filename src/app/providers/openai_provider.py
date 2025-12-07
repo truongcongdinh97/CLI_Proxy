@@ -31,20 +31,17 @@ class OpenAIProvider(BaseProvider):
         super().__init__(config, auth_manager, http_client)
         self.base_url = config.base_url or "https://api.openai.com"
         self.api_version = "v1"
+        self.api_key = config.api_key
     
     async def initialize(self) -> None:
         """Initialize the provider."""
-        await super().initialize()
-        
-        # Get authentication token
-        token = await self.auth_manager.get_token("openai")
-        if token:
-            self.http_client.set_auth_token(f"Bearer {token}")
-        
-        # Set default headers
-        self.http_client.set_default_headers({
+        # Set default headers with API key
+        headers = {
             "Content-Type": "application/json",
-        })
+        }
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        self.http_client.set_default_headers(headers)
         
         self._set_status(ProviderStatus.HEALTHY)
     
