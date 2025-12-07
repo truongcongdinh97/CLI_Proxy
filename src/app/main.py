@@ -95,6 +95,13 @@ async def lifespan(app: FastAPI):
         # Initialize translator registry
         app_state.translator_registry = TranslatorRegistry()
         
+        # Set state on app for route access
+        app.state.config = app_state.config
+        app.state.auth_manager = app_state.auth_manager
+        app.state.provider_registry = app_state.provider_registry
+        app.state.store_manager = app_state.store_manager
+        app.state.translator_registry = app_state.translator_registry
+        
         logger.info("Application startup completed")
         yield
         
